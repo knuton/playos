@@ -41,12 +41,12 @@
               setxkbmap $(cat /var/lib/gui-localization/keymap) || true
             fi
 
-            # Enable Qt WebEngine Developer Tools (https://doc.qt.io/qt-5/qtwebengine-debugging.html)
-            export QTWEBENGINE_REMOTE_DEBUGGING="127.0.0.1:3355"
+            # Screen size
+            RESOLUTION=$(${pkgs.xorg.xdpyinfo}/bin/xdpyinfo | grep -Po "(?<=dimensions:)\s*([0-9]{1,}x[0-9]{1,})" | sed "s: ::g")
+            SCREEN_WIDTH=$(echo $RESOLUTION | cut -d'x' -f1)
+            SCREEN_HEIGHT=$(echo $RESOLUTION | cut -d'x' -f2)
 
-            ${pkgs.playos-kiosk-browser}/bin/kiosk-browser \
-              ${config.playos.kioskUrl} \
-              http://localhost:3333/
+            ${pkgs.google-chrome}/bin/google-chrome-stable --window-size=$SCREEN_WIDTH,$SCREEN_HEIGHT --window-position=0,0 --start-maximized --no-default-browser-check --enable-experimental-web-platform-features ${config.playos.kioskUrl}
 
             waitPID=$!
           '';
