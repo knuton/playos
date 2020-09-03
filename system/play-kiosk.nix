@@ -6,8 +6,8 @@
   users.users.play = {
     isNormalUser = true;
     home = "/home/play";
-    # who can play audio.
-    extraGroups = [ "audio" ];
+    # who can play audio and open serial devices.
+    extraGroups = [ "audio" "dialout" ];
   };
 
   # Note that setting up "/home" as persistent fails due to https://github.com/NixOS/nixpkgs/issues/6481
@@ -79,6 +79,14 @@
   systemd.services."dividat-driver" = {
     description = "Dividat Driver";
     serviceConfig.ExecStart = "${pkgs.dividat-driver}/bin/dividat-driver";
+    serviceConfig.User = "play";
+    wantedBy = [ "multi-user.target" ];
+  };
+
+  # Handlauf driver service
+  systemd.services."handlauf" = {
+    description = "Handlauf Driver";
+    serviceConfig.ExecStart = "${pkgs.handlauf-driver}/bin/handlauf -debug :3030 -usb-prefix ttyACM";
     serviceConfig.User = "play";
     wantedBy = [ "multi-user.target" ];
   };

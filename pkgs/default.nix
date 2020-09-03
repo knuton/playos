@@ -28,6 +28,10 @@ let
         inherit (super) stdenv fetchurl;
       };
 
+      handlauf-driver = (import ./handlauf-driver) {
+        inherit (super) buildGoModule fetchFromGitHub;
+      };
+
       playos-kiosk-browser = import ../kiosk {
         pkgs = self;
         system_name = "PlayOS";
