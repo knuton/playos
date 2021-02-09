@@ -32,6 +32,15 @@ if [ "$TARGET" == "vm" ]; then
   echo "- quit: ctrl-alt-q"
   echo "- tty: ctrl-alt-2, sendkey ctrl-alt-f1, ctrl-alt-1"
 
+elif [ "$TARGET" == "stuck" ]; then
+
+  (set -x; nix-build \
+    --arg kioskUrl https://play.dividat.com/ \
+    --arg buildBundle false \
+    --arg buildDisk false)
+
+  echo
+
 elif [ "$TARGET" == "develop" ]; then
 
   ensure_branch "develop"
