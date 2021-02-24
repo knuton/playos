@@ -1,10 +1,10 @@
 {stdenv, fetchurl}:
 stdenv.mkDerivation rec {
   name = "dividat-driver-${version}";
-  version = "2.2.0-rc1-19-g7c7c59f";
+  version = "2.2.0-rc1-22-gd3706e5";
   channel = "master";
 
-  src = ./dividat-driver-linux-amd64-2.2.0-rc1-19-g7c7c59f;
+  src = ./dividat-driver-linux-amd64-2.2.0-rc1-22-gd3706e5;
 
   buildCommand = ''
     mkdir -p $out/bin
