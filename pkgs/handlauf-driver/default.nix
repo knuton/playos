@@ -7,10 +7,10 @@ buildGoModule rec {
   src = fetchFromGitHub {
     owner = "256dpi";
     repo = "handlauf";
-    rev = "v${version}";
-    sha256 = "0lvbydcy2rckqf2qk5cizibvvmah790zicji9d60rzlrf68xg7sf";
+    rev = "de894641b2d7cb30c93204a91b156394da91427d";
+    sha256 = "19bhx59rc3k920hc33vjkw85nj2b8csw20wgj6x0b1m2lvzm56a6";
   };
 
-  vendorSha256 = "0y4vcw47kpxi1301qc80hvrbdzf0hfkyvhxj0iv6n7yh13b7x66s";
+  vendorSha256 = "0zsf3mg9rv8mgxajw6k96hdpjqn4prb04qnnjvkv4vxv3npah31r";
 
 }
