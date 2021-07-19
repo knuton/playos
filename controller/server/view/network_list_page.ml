@@ -12,7 +12,7 @@ let service { id; name; strength; ipv4 } =
         ~a:[ a_class [ "d-NetworkList__Network" ]
         ; a_href ("/network/" ^ id)
         ]
-        [ div [ txt name ]
+        [ div [ name |> Option.value ~default:"Hidden" |> txt ]
         ; (match ipv4 with
           | Some ipv4_addr ->
                 div ~a:[ a_class [ "d-NetworkList__Address" ] ] [ txt (ipv4_addr.address) ]

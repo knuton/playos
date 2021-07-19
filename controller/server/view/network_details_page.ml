@@ -33,6 +33,7 @@ let proxy_form_note =
     ]
 
 let not_connected_form service =
+  let name_id = "name-" ^ service.id in
   let passphrase_id = "passphrase-" ^ service.id in
   form
       ~a:[ a_action ("/network/" ^ service.id ^ "/connect")
@@ -45,6 +46,18 @@ let not_connected_form service =
               ~a:[ a_label_for passphrase_id ]
               [ txt "Passphrase" ]
           ]
+      ; (match service.name with
+        | Some name ->
+                        txt ""
+        | None ->
+          input
+          ~a:[ a_input_type `Text
+          ; a_class [ "d-Input"; "d-Network__Input" ]
+          ; a_id name_id
+          ; a_name "name"
+          ]
+          ()
+      )
       ; input
           ~a:[ a_input_type `Password
           ; a_class [ "d-Input"; "d-Network__Input" ]
@@ -257,7 +270,7 @@ let html service =
           ~a:[ a_class [ "d-Title" ] ]
           [ div
               ~a:[ a_class [ "d-Network__Title" ] ]
-              [ h1 [ txt service.name ]
+              [ h1 [ service.name |> Option.value ~default:"Hidden" |> txt ]
               ; strength
               ]
           ]

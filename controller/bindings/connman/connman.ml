@@ -80,8 +80,7 @@ module Agent =
 struct
 
   type input =
-    | None
-    | Passphrase of string
+    ( string * string ) list
   [@@deriving sexp]
 
   type t = input OBus_object.t
@@ -93,29 +92,26 @@ struct
     return_unit
 
   let request_input input service (fields: (string * OBus_value.V.single) list) =
-    let%lwt () = Logs_lwt.debug ~src:log_src
+    let%lwt () = Logs_lwt.info ~src:log_src
         (fun m -> m "input requested from agent for service %s"
             (String.concat "/" service)
         )
     in
-    match input with
-    | Passphrase p ->
-      (match List.assoc_opt "Passphrase" fields with
-       | Some _ ->
-         return [ "Passphrase", p |> OBus_value.C.(make_single basic_string)]
-       | None ->
-         let%lwt () = Logs_lwt.err ~src:log_src
-             (fun m -> m "Passphrase available as input but not being requested")
-         in
-         OBus_error.make "net.connman.Agent.Error.Canceled" "."
-         |> Lwt.fail
-      )
-    | None ->
-      let%lwt () = Logs_lwt.err ~src:log_src
-          (fun m -> m "input requested from agent but none available.")
-      in
-      OBus_error.make "net.connman.Agent.Error.Canceled" "No input available."
-      |> Lwt.fail
+    let%lwt () = Logs_lwt.info ~src:log_src
+        (fun m -> m "input requested: %s"
+            (String.concat ", " (List.map fst fields))
+        )
+    in
+    let is_supported (prop_name, _ ) =
+        List.mem prop_name [ "Name"; "Passphrase" ]
+    in
+    return (
+        List.map
+          (fun (key, _) ->
+                  (key, List.assoc key input |> OBus_value.C.(make_single basic_string))
+          )
+          (List.filter is_supported fields)
+        )
 
 
   let request_browser input service url =
@@ -270,7 +266,7 @@ struct
     _proxy : (OBus_proxy.t [@sexp.opaque])
   ; _manager : (OBus_proxy.t [@sexp.opaque])
   ; id : string
-  ; name : string
+  ; name : string option
   ; type' : Technology.type'
   ; state : state
   ; strength : int option
@@ -330,7 +326,7 @@ struct
           ; ipv4 = (if Option.is_some ipv4_user_config then ipv4_user_config else ipv4)
           ; ipv6; ethernet; proxy; nameservers
           })
-      <*> (properties |> List.assoc_opt "Name" >>= string_of_obus)
+      <*> (properties |> List.assoc_opt "Name" >>= string_of_obus |> pure)
       <*> (properties |> List.assoc_opt "Type" >>= string_of_obus >>= Technology.type_of_string)
       <*> (properties |> List.assoc_opt "State" >>= string_of_obus >>= state_of_string)
       <*> (properties |> List.assoc_opt "Strength" >>= strength_of_obus |> pure)
@@ -403,7 +399,7 @@ struct
 
 
 
-  let connect ?(input=Agent.None) service =
+  let connect ?(input=[]) service =
     let%lwt () = Logs_lwt.debug ~src:log_src
         (fun m -> m "connect to service %s" service.id)
     in

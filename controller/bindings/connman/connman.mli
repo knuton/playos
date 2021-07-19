@@ -42,8 +42,7 @@ module Agent : sig
       Note that not all possible inputs are supported and thus connecting to some networks is not possible (e.g. WPS). See the ConnMan Agent API documentation for more information.
   *)
   type input =
-    | None (** No input *)
-    | Passphrase of string (** The passphrase for authentication. For example a WEP key, a PSK passphrase or a passphrase for EAP authentication methods.*)
+    ( string * string ) list
   [@@deriving sexp]
 end
 
@@ -103,7 +102,7 @@ module Service : sig
     _proxy : (OBus_proxy.t [@sexp.opaque])
   ; _manager: (OBus_proxy.t [@sexp.opaque])
   ; id : string
-  ; name : string
+  ; name : string option
   ; type' : Technology.type'
   ; state : state
   ; strength : int option

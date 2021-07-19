@@ -269,12 +269,16 @@ module NetworkGui = struct
   (** Connect to a service *)
   let connect ~(connman:Connman.Manager.t) req =
     let%lwt form_data = urlencoded_pairs_of_body req in
-    let passphrase =
-      match form_data |> List.assoc_opt "passphrase" with
-      | Some [ passphrase ] ->
-        Connman.Agent.Passphrase passphrase
-      | _ ->
-        Connman.Agent.None
+    let agent_input =
+            List.filter_map
+            (fun (property) ->
+                match List.assoc_opt (String.lowercase_ascii property) form_data with
+                | Some [ value ] ->
+                      Some (property, value)
+                | _ ->
+                                None
+            )
+            [ "Passphrase"; "Name" ]
     in
     let%lwt service = with_service ~connman (param req "id") in
 
@@ -283,17 +287,17 @@ module NetworkGui = struct
     let%lwt () = Connman.Service.set_dhcp_ipv4 service in
 
     let%lwt proxy = with_empty_or_valid_proxy form_data in
-    let%lwt () = Connman.Service.connect ~input:passphrase service in
+    let%lwt () = Connman.Service.connect ~input:agent_input service in
     match proxy with
     | None ->
       (* Removing a proxy that would have been configured in the past *)
       let%lwt () = Connman.Service.set_direct_proxy service in
-      Lwt.return (success (Format.sprintf "Connected with %s." service.name))
+      Lwt.return (success (Format.sprintf "Connected with %s." (service.name |> Option.value ~default:"Hidden WLAN")))
     | Some proxy ->
       let%lwt () = Connman.Service.set_manual_proxy service (Proxy.to_string ~hide_password:false proxy) in
       Lwt.return (success (Format.sprintf
         "Connected with %s and proxy '%s'."
-        service.name
+        (Option.value ~default:"Hidden WLAN" service.name)
         (Proxy.to_string ~hide_password:true proxy)))
 
   (** Update the proxy of a service *)
@@ -307,14 +311,14 @@ module NetworkGui = struct
       let%lwt () = Connman.Service.set_manual_proxy service (Proxy.to_string ~hide_password:false proxy) in
       Lwt.return (success (Format.sprintf
         "Proxy of %s has been updated to '%s'."
-        service.name
+        (Option.value ~default:"Hidden WLAN" service.name)
         (Proxy.to_string ~hide_password:true proxy)))
 
   (** Remove the proxy of a service *)
   let remove_proxy ~(connman:Connman.Manager.t) req =
     let%lwt service = with_service ~connman (param req "id") in
     let%lwt () = Connman.Service.set_direct_proxy service in
-    Lwt.return (success (Format.sprintf "Proxy of %s has been disabled." service.name))
+    Lwt.return (success (Format.sprintf "Proxy of %s has been disabled." (Option.value ~default:"Hidden WLAN" service.name)))
 
   (** Set static IP configuration on a service *)
   let update_static_ip ~(connman: Connman.Manager.t) req =
@@ -331,7 +335,7 @@ module NetworkGui = struct
     let nameservers = get_prop "nameservers" |> String.split_on_char ',' |> List.map (String.trim) in
     let%lwt () = Connman.Service.set_manual_ipv4 service ~address ~netmask ~gateway in
     let%lwt () = Connman.Service.set_nameservers service nameservers in
-    Lwt.return (success (Format.sprintf "Configured static IP for %s." service.name))
+    Lwt.return (success (Format.sprintf "Configured static IP for %s." (Option.value ~default:"Hidden WLAN" service.name)))
 
   (** Remove static IP configuration from a service *)
   let remove_static_ip ~(connman: Connman.Manager.t) req =
@@ -339,13 +343,13 @@ module NetworkGui = struct
     let%lwt service = with_service ~connman (param req "id") in
     let%lwt () = Connman.Service.set_dhcp_ipv4 service in
     let%lwt () = Connman.Service.set_nameservers service [] in
-    Lwt.return (success (Format.sprintf "Removed static IP configuration of %s." service.name))
+    Lwt.return (success (Format.sprintf "Removed static IP configuration of %s." (Option.value ~default:"Hidden WLAN" service.name)))
 
   (** Remove a service **)
   let remove ~(connman:Connman.Manager.t) req =
     let%lwt service = with_service ~connman (param req "id") in
     let%lwt () = Connman.Service.remove service in
-    Lwt.return (success (Format.sprintf "Removed service %s." service.name))
+    Lwt.return (success (Format.sprintf "Removed service %s." (Option.value ~default:"Hidden WLAN" service.name)))
 
   let build ~(connman:Connman.Manager.t) app =
     app
