@@ -16,11 +16,11 @@ in buildGoModule rec {
   src = fetchFromGitHub {
     owner = "dividat";
     repo = "driver";
-    rev = "9146cbf2f540cd5aa9cea5828f83993c8629657b";
-    sha256 = "1lsh0lyjwdhk24zrryaqszl1k3356yzckzx32q7mbcvvkh17hs9q";
+    rev = "c4e2b1638828e8d274357418765584feded04226";
+    sha256 = "1mv19hsrzzczakn5qih0sb6a877p3v4v722vnanwiyq2frqrzl49";
   };
 
-  vendorSha256 = "1lvgp9q3g3mpmj6khbg6f1z9zgdlmwgf65rqx4d7v50a1m7g9a0m";
+  vendorSha256 = "0y6qwm0bia8h9pfchmp7nh33m1hawsp11y9w7n6463a856an75h3";
 
   nativeBuildInputs = with pkgs; [ pkgconfig pcsclite ];
   buildInputs = with pkgs; [ pcsclite ];
