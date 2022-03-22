@@ -81,6 +81,7 @@ elif [ "$TARGET" == "stuck" ]; then
   (set -x; nix-build \
     --arg kioskUrl "$2" \
     --arg buildBundle false \
+    --arg buildLive false \
     --arg buildDisk false)
 
 elif [ "$TARGET" == "lab-key" ]; then

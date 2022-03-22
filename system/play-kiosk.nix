@@ -19,11 +19,10 @@
     group = "users";
   };
 
+
   # Kiosk session
   services.xserver = {
     enable = true;
-
-    displayManager.defaultSession = "kiosk-browser";
 
     desktopManager = {
       xterm.enable = false;
@@ -34,14 +33,6 @@
             xset s off
             xset s noblank
             xset -dpms
-
-            # Localization for xsession
-            if [ -f /var/lib/gui-localization/lang ]; then
-              export LANG=$(cat /var/lib/gui-localization/lang)
-            fi
-            if [ -f /var/lib/gui-localization/keymap ]; then
-              setxkbmap $(cat /var/lib/gui-localization/keymap) || true
-            fi
 
             # Enable Qt WebEngine Developer Tools (https://doc.qt.io/qt-5/qtwebengine-debugging.html)
             export QTWEBENGINE_REMOTE_DEBUGGING="127.0.0.1:3355"
@@ -69,10 +60,26 @@
         user = "play";
       };
 
+      defaultSession = "kiosk-browser";
       sessionCommands = ''
         ${pkgs.xorg.xrdb}/bin/xrdb -merge <<EOF
           Xcursor.theme: ${pkgs.breeze-contrast-cursor-theme.themeName}
         EOF
+
+        # Localization for xsession
+        if [ -f /var/lib/gui-localization/lang ]; then
+          export LANG=$(cat /var/lib/gui-localization/lang)
+        fi
+        if [ -f /var/lib/gui-localization/keymap ]; then
+          setxkbmap $(cat /var/lib/gui-localization/keymap) || true
+        fi
+
+        # Disable virtual terminal switching with Ctrl-Alt-F12
+        # Users tend to press this instead of Ctrl-Shift-F12 and get scared by the black screen
+        ${pkgs.xorg.xkbcomp}/bin/xkbcomp $DISPLAY keymap.xkb
+        sed -i 's/SwitchScreen(screen=12.\+)/NoAction()/' keymap.xkb
+        ${pkgs.xorg.xkbcomp}/bin/xkbcomp keymap.xkb $DISPLAY
+        rm keymap.xkb
       '';
     };
   };
@@ -92,12 +99,12 @@
   # [1] https://www.freedesktop.org/wiki/Software/PulseAudio/Documentation/User/WhatIsWrongWithSystemWide/
   hardware.pulseaudio.systemWide = true;
 
-  # Install a command line mixer
-  # TODO: remove when controlling audio works trough controller
   environment.systemPackages = with pkgs; [
+    breeze-contrast-cursor-theme
+
+    # Install a command line mixer
     pamix
     pamixer
-    breeze-contrast-cursor-theme
   ];
 
   # Enable avahi for Senso discovery
