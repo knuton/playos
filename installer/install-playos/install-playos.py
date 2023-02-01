@@ -72,6 +72,15 @@ def create_partitioning(device):
     esp.setFlag(parted.PARTITION_BOOT)
     disk.addPartition(
         partition=esp, constraint=device.optimalAlignedConstraint)
+    # Create boot
+    boot = parted.Partition(
+        disk=disk,
+        type=parted.PARTITION_NORMAL,
+        fs=parted.FileSystem(type='ext4', geometry=geometries['boot']),
+        geometry=geometries['boot'])
+    boot.setFlag(parted.PARTITION_NORMAL)
+    disk.addPartition(
+        partition=boot, constraint=device.optimalAlignedConstraint)
     # Create Data partition
     data = parted.Partition(
         disk=disk,
@@ -104,10 +113,14 @@ def _compute_geometries(device):
     esp = parted.Geometry(
         device=device,
         start=parted.sizeToSectors(8, "MB", sectorSize),
+        length=parted.sizeToSectors(128, "MB", sectorSize))
+    boot = parted.Geometry(
+        device=device,
+        start=esp.end + 1,
         length=parted.sizeToSectors(550, "MB", sectorSize))
     data = parted.Geometry(
         device=device,
-        start=esp.end + 1,
+        start=boot.end + 1,
         length=parted.sizeToSectors(PARTITION_SIZE_GB_DATA, "GB", sectorSize))
     systemA = parted.Geometry(
         device=device,
@@ -119,22 +132,29 @@ def _compute_geometries(device):
         start=systemA.end + 1,
         length=parted.sizeToSectors(PARTITION_SIZE_GB_SYSTEM, "GB",
                                     sectorSize))
-    return {'esp': esp, 'data': data, 'systemA': systemA, 'systemB': systemB}
+    return {'esp': esp, 'boot': boot, 'data': data, 'systemA': systemA, 'systemB': systemB}
 
 
 def install_bootloader(disk, machine_id):
     """ Install bootloader and rescue system
     """
     esp = disk.partitions[0]
-    subprocess.run(['mkfs.vfat', '-n', 'ESP', esp.path], check=True)
+    boot = disk.partitions[1]
+    subprocess.run(['mkfs.vfat', '-n', 'EFI', esp.path], check=True)
+    subprocess.run(['mkfs.ext4', '-F', '-L', 'ESP', boot.path], check=True)
+
     os.makedirs('/mnt/boot', exist_ok=True)
-    subprocess.run(['mount', esp.path, '/mnt/boot'], check=True)
+    subprocess.run(['mount', boot.path, '/mnt/boot'], check=True)
+
+    os.makedirs('/mnt/boot/efi', exist_ok=True)
+    subprocess.run(['mount', esp.path, '/mnt/boot/efi'], check=True)
+
     _suppress_unless_fails(
         subprocess.run(
             [
                 'grub-install', '--no-nvram', '--no-bootsector', '--removable',
                 '--boot-directory', '/mnt/boot', '--target', 'x86_64-efi',
-                '--efi-directory', '/mnt/boot'
+                '--efi-directory', '/mnt/boot/efi'
             ],
             check=True,
             stdout=subprocess.PIPE,
@@ -151,13 +171,14 @@ def install_bootloader(disk, machine_id):
     shutil.copy2(RESCUE_SYSTEM + '/initrd', '/mnt/boot/rescue/initrd')
 
     # Unmount to make this function idempotent.
+    subprocess.run(['umount', '/mnt/boot/efi'], check=True)
     subprocess.run(['umount', '/mnt/boot'], check=True)
 
 
-def add_rauc_status_entries(esp, slot_name):
+def add_rauc_status_entries(device_path, slot_name):
     """ Add metadata about installation to status.ini file """
     # Mount ESP
-    subprocess.run(['mount', esp, '/mnt/boot'], check=True)
+    subprocess.run(['mount', device_path, '/mnt/boot'], check=True)
 
     # Read existing status file
     status = configparser.ConfigParser()
@@ -221,17 +242,17 @@ def install_system(partitionPath, label):
 def install(disk):
     """ Install to already partitioned disk """
     # Create data partition filesystem
-    dataPartition = disk.partitions[1]
+    dataPartition = disk.partitions[2]
     subprocess.run(
         ['mkfs.ext4', '-F', '-L', 'data', dataPartition.path], check=True)
 
     # Install system.a
-    install_system(disk.partitions[2].path, 'system.a')
-    add_rauc_status_entries(disk.partitions[0].path, 'system.a')
+    install_system(disk.partitions[3].path, 'system.a')
+    add_rauc_status_entries(disk.partitions[1].path, 'system.a')
 
     # Install system.b
-    install_system(disk.partitions[3].path, 'system.b')
-    add_rauc_status_entries(disk.partitions[0].path, 'system.b')
+    install_system(disk.partitions[4].path, 'system.b')
+    add_rauc_status_entries(disk.partitions[1].path, 'system.b')
 
 
 def _suppress_unless_fails(completed_process):
