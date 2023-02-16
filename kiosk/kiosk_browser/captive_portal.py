@@ -52,15 +52,25 @@ class CaptivePortal():
                 try:
                     r = requests.get(check_connection_url, allow_redirects = False)
 
-                    if r.status_code == 200:
+                    # Expect the combination of known code and body for being connected.
+                    if r.status_code == 200 and 'Open Sesame' in r.text:
                         self._status = Status.DIRECT_CONNECTED
 
+                    # The conventional redirection to the captive portal address.
                     elif r.status_code in [301, 302, 303, 307, 308]:
                         self._status = Status.DIRECT_CAPTIVE
                         self.show_captive_portal_message(r.headers['Location'])
 
+                    # The alternative 511 with link to captive portal.
+                    elif r.status_code == 511:
+                        self._status = Status.DIRECT_CAPTIVE
+                        self.show_captive_portal_message(check_connection_url)
+
+                    # In all other cases where the request completed with an unexpected
+                    # result, still assume we are captive.
                     else:
-                        self._status = Status.DIRECT_DISCONNECTED
+                        self._status = Status.DIRECT_CAPTIVE
+                        self.show_captive_portal_message(check_connection_url)
 
                 except requests.exceptions.RequestException as e:
                     self._status = Status.DIRECT_DISCONNECTED
