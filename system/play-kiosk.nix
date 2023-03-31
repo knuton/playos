@@ -129,4 +129,9 @@
       });
   '';
 
+  services.udev.extraRules = ''
+  # udev rules for deadzones on Teensy emulated joysticks
+  SUBSYSTEM=="input", ENV{ID_VENDOR_ID}=="16c0", ACTION=="add", RUN+="${pkgs.linuxConsoleTools}/bin/jscal -s 7,1,0,512,512,1048544,1050595,1,0,512,512,1048544,1050595,1,0,512,512,1048544,1050595,1,0,512,512,1048544,1050595,1,0,512,512,1048544,1050595,1,0,0,0,536854528,536854528,1,0,0,0,536854528,536854528 /dev/input/js1"
+'';
+
 }
