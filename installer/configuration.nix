@@ -5,6 +5,7 @@ with lib;
 {
   imports = [
     (pkgs.importFromNixos "modules/installer/cd-dvd/iso-image.nix")
+    ../hardware/configuration.nix
   ];
 
   # Custom label when identifying OS

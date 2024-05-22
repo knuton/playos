@@ -56,6 +56,11 @@ let
 in
 (nixos {
   configuration = {config,...}: {
+
+    imports = [
+      ../../hardware/configuration.nix
+    ];
+
     # disable installation of bootloader
     boot.loader.grub.enable = false;
 
