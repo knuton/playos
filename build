@@ -12,8 +12,7 @@ if [ "$TARGET" == "vm" ]; then
   (set -x; nix-build \
     --arg buildInstaller false \
     --arg buildBundle false \
-    --arg buildLive false \
-    --arg buildDisk false)
+    --arg buildLive false)
 
 echo -e "
 Run ./result/bin/run-in-vm to start a VM.
@@ -39,8 +38,7 @@ elif [ "$TARGET" == "develop" ]; then
     --arg updateCert ./pki/develop/cert.pem \
     --arg updateUrl https://dist.dividat.com/releases/playos/develop/ \
     --arg deployUrl s3://dist.dividat.ch/releases/playos/develop/ \
-    --arg kioskUrl https://dev-play.dividat.com/ \
-    --arg buildDisk false)
+    --arg kioskUrl https://dev-play.dividat.com/)
 
   echo
   echo "Run ./result/bin/deploy-update to deploy."
@@ -54,8 +52,7 @@ elif [ "$TARGET" == "validation" ]; then
     --arg updateCert ./pki/validation/cert.pem \
     --arg updateUrl https://dist.dividat.com/releases/playos/validation/ \
     --arg deployUrl s3://dist.dividat.ch/releases/playos/validation/ \
-    --arg kioskUrl https://val-play.dividat.com/ \
-    --arg buildDisk false)
+    --arg kioskUrl https://val-play.dividat.com/)
 
   echo
   echo "Run ./result/bin/deploy-update to deploy."
@@ -69,8 +66,7 @@ elif [ "$TARGET" == "master" ]; then
     --arg updateCert ./pki/master/cert.pem \
     --arg updateUrl https://dist.dividat.com/releases/playos/master/ \
     --arg deployUrl s3://dist.dividat.ch/releases/playos/master/ \
-    --arg kioskUrl https://play.dividat.com/ \
-    --arg buildDisk false)
+    --arg kioskUrl https://play.dividat.com/)
 
   echo
   echo "Run ./result/bin/deploy-update to deploy."
@@ -87,24 +83,21 @@ elif [ "$TARGET" == "stuck" ]; then
 
   (set -x; nix-build \
     --arg kioskUrl "$KIOSK_URL" \
-    --arg buildBundle false \
-    --arg buildDisk false)
+    --arg buildBundle false)
 
 elif [ "$TARGET" == "lab-key" ]; then
 
   (set -x; nix-build \
     --arg kioskUrl https://lab.dividat.com/ \
     --arg buildInstaller false \
-    --arg buildBundle false \
-    --arg buildDisk false)
+    --arg buildBundle false)
 
 elif [ "$TARGET" == "shed-key" ]; then
 
   (set -x; nix-build \
     --arg kioskUrl https://shed.dividat.com/ \
     --arg buildInstaller false \
-    --arg buildBundle false \
-    --arg buildDisk false)
+    --arg buildBundle false)
 
 elif [ "$TARGET" == "default" ]; then
 

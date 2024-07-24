@@ -19,7 +19,6 @@ in
   ##### Allow disabling the build of unused artifacts when developing/testing #####
 , buildInstaller ? true
 , buildBundle ? true
-, buildDisk ? true
 , buildLive ? true
 }:
 
@@ -79,9 +78,6 @@ let
 
     # NixOS system toplevel with test machinery
     testingToplevel = callPackage ./testing/system { application = application; };
-
-    # Disk image containing pre-installed system
-    disk = if buildDisk then callPackage ./testing/disk {} else null;
 
     # Script for spinning up VMs
     run-in-vm = callPackage ./testing/run-in-vm {};

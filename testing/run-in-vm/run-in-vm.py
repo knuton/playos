@@ -10,7 +10,6 @@ import argparse
 
 VERSION = "@version@"
 TESTING_SYSTEM_TOP_LEVEL = "@testingToplevel@"
-DISK = "@disk@"
 OVMF = "@ovmf@"
 
 # Tools
@@ -19,10 +18,6 @@ QEMU_SYSTEM_X86_64 = "@qemu@/bin/qemu-system-x86_64"
 QEMU_IMG = "@qemu@/bin/qemu-img"
 
 DEFAULT_QEMU_OPTS = ['--enable-kvm', '-m', '2048']
-
-# set DISK to None if not substituted
-if not os.path.isfile(DISK):
-    DISK = None
 
 
 @contextmanager
@@ -115,36 +110,23 @@ def _qemu(opts):
 
 
 def main(opts):
-    if opts.disk:
-        if DISK:
-            run_disk(DISK, opts.qemu_options)
-        else:
-            print("ERROR: disk not built.")
-            exit(1)
-    else:
-        run_vm(TESTING_SYSTEM_TOP_LEVEL, opts.qemu_options, opts.kernel_args)
+    run_vm(TESTING_SYSTEM_TOP_LEVEL, opts.qemu_options, opts.kernel_args)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description="Run PlayOS in a Virtual Machine.",
         epilog=
-        "By default a system is started with testing instrumentation activated. This testing system does not boot via GRUB and has no disks attached. This is useful for rapidly testing higher-level system configurations. If you want to test lower-level system components use the '--disk' option which will start a system without test instrumentation."
+        "This starts a system with testing instrumentation. This testing system does not boot via GRUB and has no disks attached. This is useful for rapidly testing higher-level system configurations, as long as the A/B system functionality is not concerned."
     )
     parser.add_argument('-v', '--version', action='version', version=VERSION)
-    parser.add_argument(
-        '-d',
-        '--disk',
-        action='store_true',
-        help="Use disk with full system. Requires the disk to have been built."
-    )
     parser.add_argument(
         '-a',
         action='append',
         dest="kernel_args",
         default=[],
         help=
-        "Additional Kernel Arguments to pass. Note that these arguments are ignored when booting from disk (as the bootloader specifies the kernel arguments)."
+        "Additional Kernel Arguments to pass"
     )
     parser.add_argument(
         '-q',
