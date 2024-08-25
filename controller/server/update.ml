@@ -74,8 +74,9 @@ let latest_download_url ~update_url version_string =
   Format.sprintf "%s%s/%s" update_url version_string (bundle_file_name version_string)
 
 (** download RAUC bundle *)
-let download ?proxy url version =
-  let bundle_path = Format.sprintf "/tmp/%s" (bundle_file_name version) in
+let download ?proxy ~update_url version_string =
+  let bundle_path = Format.sprintf "/tmp/%s" (bundle_file_name version_string) in
+  let url = Uri.of_string (latest_download_url ~update_url version_string) in
   let options =
     [ "--continue-at"; "-" (* resume download *)
     ; "--limit-rate"; "10M"
@@ -94,7 +95,7 @@ type state =
   | GettingVersionInfo
   | ErrorGettingVersionInfo of string
   | UpToDate of version_info
-  | Downloading of {url: string; version: string}
+  | Downloading of string
   | ErrorDownloading of string
   | Installing of string
   | ErrorInstalling of string
@@ -157,9 +158,7 @@ let rec run ~connman ~update_url ~rauc ~set_state =
 
         else if inactive_update_available then
           (* Booted system is not up to date and there is an update available for inactive system. *)
-          let latest_version = version_info.latest |> snd in
-          let url = latest_download_url ~update_url latest_version in
-          Downloading {url = url; version = latest_version}
+          Downloading (version_info.latest |> snd)
           |> set
 
         else
@@ -190,10 +189,10 @@ let rec run ~connman ~update_url ~rauc ~set_state =
     let%lwt () = Lwt_unix.sleep 30.0 in
     set GettingVersionInfo
 
-  | Downloading {url; version} ->
+  | Downloading version_string ->
     (* download latest version *)
     let%lwt proxy = get_proxy_uri connman in
-    (match%lwt Lwt_result.catch (fun () -> download ?proxy (Uri.of_string url) version) with
+    (match%lwt Lwt_result.catch (fun () -> download ?proxy ~update_url version_string) with
      | Ok bundle_path ->
        Installing bundle_path
        |> set
