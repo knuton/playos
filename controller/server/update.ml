@@ -107,6 +107,47 @@ type state =
   | ReinstallRequired
 [@@deriving sexp]
 
+let evaluate_version_info current_primary booted_slot version_info =
+  (* Compare latest available version to version booted. *)
+  let booted_version_compare = Semver.compare version_info.latest version_info.booted in
+  let booted_up_to_date = booted_version_compare = 0 in
+
+  (* Compare latest available version to version on inactive system partition. *)
+  let inactive_version_compare = Semver.compare version_info.latest version_info.inactive in
+  let inactive_up_to_date = inactive_version_compare = 0 in
+  let inactive_update_available = inactive_version_compare > 0 in
+
+  if booted_up_to_date || inactive_up_to_date then
+    match current_primary with
+    | Some primary_slot ->
+      if booted_up_to_date then
+        (* Don't care if inactive can be updated. I.e. Only update the inactive partition once the booted partition is outdated. This results in always two versions being available on the machine. *)
+        UpToDate version_info |> return
+      else
+        if booted_slot = primary_slot then
+          (* Inactive is up to date while booted is out of date, but booted was specifically selected for boot *)
+          OutOfDateVersionSelected |> return
+        else
+          (* If booted is not up to date but inactive is both up to date and primary, we should reboot into the primary *)
+          RebootRequired |> return
+    | None ->
+      (* All systems bad; suggest reinstallation *)
+      ReinstallRequired |> return
+
+  else if inactive_update_available then
+    (* Booted system is not up to date and there is an update available for inactive system. *)
+    Downloading (Semver.to_string version_info.latest) |> return
+
+  else
+    let msg =
+      ("nonsensical version information: "
+       ^ (version_info
+          |> sexp_of_version_info
+          |> Sexplib.Sexp.to_string_hum))
+    in
+    let%lwt () = Logs_lwt.warn ~src:log_src (fun m -> m "%s" msg) in
+    ErrorGettingVersionInfo msg |> return
+
 
 (** Finite state machine handling updates *)
 let rec run ~connman ~update_url ~rauc ~set_state =
@@ -121,54 +162,13 @@ let rec run ~connman ~update_url ~rauc ~set_state =
   | GettingVersionInfo ->
     (* get version information and decide what to do *)
     let%lwt proxy = get_proxy_uri connman in
+    let%lwt current_primary = Rauc.get_primary rauc in
+    let%lwt booted_slot = Rauc.get_booted_slot rauc in
     begin
       match%lwt get_version_info ~proxy update_url rauc with
       | Ok version_info ->
-
-        (* Compare latest available version to version booted. *)
-        let booted_version_compare = Semver.compare version_info.latest version_info.booted in
-        let booted_up_to_date = booted_version_compare = 0 in
-
-        (* Compare latest available version to version on inactive system partition. *)
-        let inactive_version_compare = Semver.compare version_info.latest version_info.inactive in
-        let inactive_up_to_date = inactive_version_compare = 0 in
-        let inactive_update_available = inactive_version_compare > 0 in
-
-        if booted_up_to_date || inactive_up_to_date then
-          match%lwt Rauc.get_primary rauc with
-          | Some primary_slot ->
-            if booted_up_to_date then
-              (* Don't care if inactive can be updated. I.e. Only update the inactive partition once the booted partition is outdated. This results in always two versions being available on the machine. *)
-              UpToDate version_info |> set
-            else
-              let%lwt booted_slot = Rauc.get_booted_slot rauc in
-              if booted_slot = primary_slot then
-                (* Inactive is up to date while booted is out of date, but booted was specifically selected for boot *)
-                OutOfDateVersionSelected |> set
-              else
-                (* If booted is not up to date but inactive is both up to date and primary, we should reboot into the primary *)
-                RebootRequired |> set
-          | None ->
-            (* All systems bad; suggest reinstallation *)
-            ReinstallRequired |> set
-
-        else if inactive_update_available then
-          (* Booted system is not up to date and there is an update available for inactive system. *)
-          Downloading (Semver.to_string version_info.latest)
-          |> set
-
-        else
-          let msg =
-            ("nonsensical version information: "
-             ^ (version_info
-                |> sexp_of_version_info
-                |> Sexplib.Sexp.to_string_hum))
-          in
-          let%lwt () =
-            Logs_lwt.warn ~src:log_src
-              (fun m -> m "%s" msg)
-          in
-          ErrorGettingVersionInfo msg |> set
+        let%lwt next_state = evaluate_version_info current_primary booted_slot version_info in
+        set next_state
 
       | Error exn ->
         ErrorGettingVersionInfo (Printexc.to_string exn)
