@@ -39,8 +39,11 @@ in
       # Allow simultaneous connection to ethernet and wifi
       SingleConnectedTechnology=false
 
-      # Enable online check to favour connected services
-      EnableOnlineCheck=true
+      # Disable online check:
+      # 1. It only works via HTTP, giving us no option to use a probe host from our firewall whitelist
+      # 2. It can cause ConnMan 1.42 to hang with captive portals that redirect to HTTPS
+      # 3. We expect limited benefit from one-shot mode for stationary installations
+      EnableOnlineCheck=false
     '';
   };
 
