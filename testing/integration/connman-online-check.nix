@@ -41,6 +41,7 @@ pkgs.testers.runNixOSTest {
           # ignore QEMU vnet
           networkInterfaceBlacklist = [ "eth0" ];
 
+          extraFlags = [ "--debug=src/service.c" ];
           extraConfig = ''
               OnlineCheckMode=none
           '';
