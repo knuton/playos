@@ -1,0 +1,67 @@
+diff --git i/src/service.c w/src/service.c
+index 06d02322..2690df98 100644
+--- i/src/service.c
++++ w/src/service.c
+@@ -157,6 +157,7 @@ static struct connman_ipconfig *create_ip6config(struct connman_service *service
+ static void dns_changed(struct connman_service *service);
+ static void vpn_auto_connect(void);
+ static void trigger_autoconnect(struct connman_service *service);
++static void service_list_sort(void);
+ 
+ struct find_data {
+ 	const char *path;
+@@ -983,6 +984,18 @@ static bool is_idle(enum connman_service_state state)
+ 	return false;
+ }
+ 
++static bool is_ipv4ll(const struct connman_service *service)
++{
++	enum connman_ipconfig_method method4;
++
++	if (!service || !service->ipconfig_ipv4)
++		return false;
++
++	method4 = __connman_ipconfig_get_method(service->ipconfig_ipv4);
++
++	return (method4 == CONNMAN_IPCONFIG_METHOD_AUTO);
++}
++
+ static int nameservers_changed_cb(void *user_data)
+ {
+ 	struct connman_service *service = user_data;
+@@ -994,6 +1007,9 @@ static int nameservers_changed_cb(void *user_data)
+ 			is_connected(service->state))
+ 		dns_changed(service);
+ 
++	service_list_sort();
++	__connman_connection_update_gateway();
++
+ 	return FALSE;
+ }
+ 
+@@ -5416,6 +5432,14 @@ static gint service_compare(gconstpointer a, gconstpointer b)
+ 			return 1;
+ 	}
+ 
++	/* Prefer configured IPv4 address over auto/link-local IP. */
++	bool a_is_link_local = is_ipv4ll(service_a);
++	bool b_is_link_local = is_ipv4ll(service_b);
++	if (a_connected && !a_is_link_local && b_is_link_local)
++		return -1;
++	if (a_is_link_local && b_connected && !b_is_link_local)
++		return 1;
++
+ 	if (service_a->favorite && !service_b->favorite)
+ 		return -1;
+ 
+@@ -5469,8 +5493,10 @@ static gint service_compare(gconstpointer a, gconstpointer b)
+ 
+ static void service_list_sort(void)
+ {
++	DBG("service_list_sort called");
+ 	if (service_list && service_list->next) {
+ 		service_list = g_list_sort(service_list, service_compare);
++		DBG("service_list_sort performed");
+ 		service_schedule_changed();
+ 	}
+ }
