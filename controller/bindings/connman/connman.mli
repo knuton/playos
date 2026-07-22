@@ -44,7 +44,7 @@ module Agent : sig
   *)
   type input =
     | None  (** No input *)
-    | EAP of string * string
+    | EAP of string * string * string
     | Passphrase of string
         (** The passphrase for authentication. For example a WEP key, a PSK passphrase or a passphrase for EAP authentication methods.*)
   [@@deriving sexp, protocol ~driver:(module Jsonm)]

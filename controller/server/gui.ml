@@ -407,17 +407,18 @@ module NetworkGui = struct
   (** Connect to a service *)
   let connect ~(connman : Connman.Manager.t) req =
     let%lwt form_data = urlencoded_pairs_of_body req in
+    let field key = List.assoc_opt key form_data in
     let input =
-      match (form_data |> List.assoc_opt "identity", form_data |> List.assoc_opt "passphrase") with
-      | (Some [ identity ], Some [ passphrase ]) ->
-          Connman.Agent.EAP (identity, passphrase)
-      | (_, Some [ passphrase ]) ->
+      match (field "eap", field "identity", field "passphrase") with
+      | Some [ eap ], Some [ identity ], Some [ passphrase ] ->
+          Connman.Agent.EAP (eap, identity, passphrase)
+      | _, _, Some [ passphrase ] ->
           Connman.Agent.Passphrase passphrase
       | _ ->
           Connman.Agent.None
     in
     let%lwt service = with_service ~connman (param req "id") in
-    let%lwt () = Connman.Service.connect ~input:input service in
+    let%lwt () = Connman.Service.connect ~input service in
     redirect' (Uri.of_string "/network")
 
   (** Update a service *)

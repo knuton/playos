@@ -83,7 +83,7 @@ let unregister_agent proxy ~path =
 module Agent = struct
   type input =
     | None
-    | EAP of string * string
+    | EAP of string * string * string
     | Passphrase of string
   [@@deriving sexp, protocol ~driver:(module Jsonm)]
 
@@ -133,21 +133,21 @@ module Agent = struct
           match requirement_opt with Some "mandatory" -> [ k ] | _ -> []
         )
         fields
-        |> List.sort String.compare
+      |> List.sort String.compare
     in
     match (input, mandatory_inputs) with
     | Passphrase p, [ "Passphrase" ] ->
         return
         @@ Ok [ ("Passphrase", p |> OBus_value.C.(make_single basic_string)) ]
-
-    | EAP (_, p), [ "Passphrase" ] ->
+    | EAP (_, _, p), [ "Passphrase" ] ->
         return
         @@ Ok [ ("Passphrase", p |> OBus_value.C.(make_single basic_string)) ]
-
-    | EAP (i, p), [ "Identity"; "Passphrase" ] ->
+    | EAP (_, i, p), [ "Identity"; "Passphrase" ] ->
         return
-        @@ Ok [ ("Identity", i |> OBus_value.C.(make_single basic_string)); ("Passphrase", p |> OBus_value.C.(make_single basic_string)) ]
-
+        @@ Ok
+             [ ("Identity", i |> OBus_value.C.(make_single basic_string))
+             ; ("Passphrase", p |> OBus_value.C.(make_single basic_string))
+             ]
     | None, [ "Passphrase" ] ->
         let%lwt () =
           Logs_lwt.err ~src:log_src (fun m ->
@@ -667,14 +667,14 @@ module Service = struct
     (* Create config file for IEEE8021x networks *)
     let%lwt () =
       match input with
-      | Agent.EAP _ ->
+      | Agent.EAP (e, _, _) ->
           let config_path =
             Printf.sprintf "/var/lib/connman/3_wifi_%s.config" service.id
           in
           let config_content =
             Printf.sprintf
-              "[service_%s]\nType = wifi\nName = %s\nEAP = peap\nPhase2 = MSCHAPV2\n"
-              service.id service.name
+              "[service_%s]\nType = wifi\nName = %s\nEAP = %s\nPhase2 = MSCHAPV2\n"
+              service.id service.name e
           in
           let%lwt () =
             Lwt_io.with_file ~mode:Lwt_io.Output config_path (fun channel ->

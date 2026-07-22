@@ -95,36 +95,47 @@ let not_connected_form service =
       ]
     (Option.to_list
        (maybe_elem requires_identity
-          (label
-             ~a:[ a_class [ "d-Label" ] ]
-             [ txt "Identity"
-             ; input
-                 ~a:
-                   [ a_input_type `Text
-                   ; a_class [ "d-Input"; "d-Network__Input" ]
-                   ; a_name "identity"
-                   ; a_required ()
-                   ]
-                 ()
+          (div
+             [ label
+                 ~a:[ a_class [ "d-Label" ] ]
+                 [ txt "Identity"
+                 ; input
+                     ~a:
+                       [ a_input_type `Text
+                       ; a_class [ "d-Input"; "d-Network__Input" ]
+                       ; a_name "identity"
+                       ; a_required ()
+                       ]
+                     ()
+                 ]
+             ; label
+                 ~a:[ a_class [ "d-Label" ] ]
+                 [ txt "Authentication Type"
+                 ; select
+                     ~a:[ a_name "eap"; a_class [ "d-Select" ]; a_required () ]
+                     [ option ~a:[ a_value "peap" ] (txt "PEAP / MSCHAPv2")
+                     ; option ~a:[ a_value "ttls" ] (txt "TTLS / MSCHAPv2")
+                     ]
+                 ]
              ]
           )
        )
     @ Option.to_list
-       (maybe_elem requires_passphrase
-          (label
-             ~a:[ a_class [ "d-Label" ] ]
-             [ txt "Password"
-             ; input
-                 ~a:
-                   [ a_input_type `Password
-                   ; a_class [ "d-Input"; "d-Network__Input" ]
-                   ; a_name "passphrase"
-                   ; Unsafe.string_attrib "is" "show-password"
-                   ]
-                 ()
-             ]
-          )
-       )
+        (maybe_elem requires_passphrase
+           (label
+              ~a:[ a_class [ "d-Label" ] ]
+              [ txt "Password"
+              ; input
+                  ~a:
+                    [ a_input_type `Password
+                    ; a_class [ "d-Input"; "d-Network__Input" ]
+                    ; a_name "passphrase"
+                    ; Unsafe.string_attrib "is" "show-password"
+                    ]
+                  ()
+              ]
+           )
+        )
     @ [ p
           [ input
               ~a:
