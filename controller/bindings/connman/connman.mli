@@ -70,6 +70,8 @@ module Service : sig
     | WPS
   [@@deriving sexp, protocol ~driver:(module Jsonm)]
 
+  val supported_security_protocols : security list
+
   (** IPv4 properties *)
   module IPv4 : sig
     type t =

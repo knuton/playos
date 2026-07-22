@@ -267,7 +267,9 @@ let unsupported_notice service =
 let html service =
   let is_service_connected = Connman.Service.is_connected service in
   let is_service_supported =
-    List.exists (fun e -> List.mem e service.security) [ PSK; WEP; None ]
+    List.exists
+      (fun e -> List.mem e service.security)
+      Connman.Service.supported_security_protocols
     || service.security = []
     (* wired connections have this *)
   in
