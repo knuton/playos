@@ -655,6 +655,13 @@ module Service = struct
     in
     set_property service ~name:"Nameservers.Configuration" ~value:config
 
+  let hex_encode_ssid s =
+    let buf = Buffer.create (String.length s * 2) in
+    String.iter
+      (fun c -> Buffer.add_string buf (Printf.sprintf "%02x" (Char.code c)))
+      s ;
+    Buffer.contents buf
+
   let connect ?(input = Agent.None) service =
     let is_supported =
       List.exists
@@ -673,8 +680,8 @@ module Service = struct
           in
           let config_content =
             Printf.sprintf
-              "[service_%s]\nType = wifi\nName = %s\nEAP = %s\nPhase2 = MSCHAPV2\n"
-              service.id service.name e
+              "[service_%s]\nType = wifi\nSSID = %s\nEAP = %s\nPhase2 = MSCHAPV2\n"
+              service.id (hex_encode_ssid service.name) e
           in
           let%lwt () =
             Lwt_io.with_file ~mode:Lwt_io.Output config_path (fun channel ->
