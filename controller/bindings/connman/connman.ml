@@ -83,6 +83,7 @@ let unregister_agent proxy ~path =
 module Agent = struct
   type input =
     | None
+    | EAP of string * string
     | Passphrase of string
   [@@deriving sexp, protocol ~driver:(module Jsonm)]
 
@@ -132,11 +133,21 @@ module Agent = struct
           match requirement_opt with Some "mandatory" -> [ k ] | _ -> []
         )
         fields
+        |> List.sort String.compare
     in
     match (input, mandatory_inputs) with
     | Passphrase p, [ "Passphrase" ] ->
         return
         @@ Ok [ ("Passphrase", p |> OBus_value.C.(make_single basic_string)) ]
+
+    | EAP (_, p), [ "Passphrase" ] ->
+        return
+        @@ Ok [ ("Passphrase", p |> OBus_value.C.(make_single basic_string)) ]
+
+    | EAP (i, p), [ "Identity"; "Passphrase" ] ->
+        return
+        @@ Ok [ ("Identity", i |> OBus_value.C.(make_single basic_string)); ("Passphrase", p |> OBus_value.C.(make_single basic_string)) ]
+
     | None, [ "Passphrase" ] ->
         let%lwt () =
           Logs_lwt.err ~src:log_src (fun m ->
@@ -277,7 +288,7 @@ module Service = struct
     | WPS
   [@@deriving sexp, protocol ~driver:(module Jsonm)]
 
-  let supported_security_protocols = [ None; WEP; PSK ]
+  let supported_security_protocols = [ None; WEP; PSK; IEEE8021x ]
 
   let string_of_security s = sexp_of_security s |> Sexplib.Sexp.to_string
 
@@ -653,6 +664,28 @@ module Service = struct
     let%lwt () =
       Logs_lwt.debug ~src:log_src (fun m -> m "connect to service %s" service.id)
     in
+    (* Create config file for IEEE8021x networks *)
+    let%lwt () =
+      match input with
+      | Agent.EAP _ ->
+          let config_path =
+            Printf.sprintf "/var/lib/connman/3_wifi_%s.config" service.id
+          in
+          let config_content =
+            Printf.sprintf
+              "[service_%s]\nType = wifi\nName = %s\nEAP = peap\nPhase2 = MSCHAPV2\n"
+              service.id service.name
+          in
+          let%lwt () =
+            Lwt_io.with_file ~mode:Lwt_io.Output config_path (fun channel ->
+              Lwt_io.write channel config_content
+            )
+          in
+          (* Yield briefly to allow ConnMan's inotify loop to process the new file *)
+          Lwt_unix.sleep 0.1
+      | Agent.None | Agent.Passphrase _ ->
+          Lwt.return_unit
+    in
     (* Store agent error in a local mutable variable *)
     let agent_reported_error = ref Option.None in
     let on_agent_error msg = Lwt.return (agent_reported_error := Some msg) in
@@ -737,8 +770,13 @@ module Service = struct
     let%lwt () =
       Logs_lwt.debug ~src:log_src (fun m -> m "remove service %s" service.id)
     in
-    OBus_method.call Connman_interfaces.Net_connman_Service.m_Remove
-      service._proxy ()
+    let config_path = Printf.sprintf "/var/lib/connman/3_wifi_%s.config" service.id in
+    let%lwt config_file_exists = Lwt_unix.file_exists config_path in
+    if config_file_exists then
+      Lwt_unix.unlink config_path
+    else
+      OBus_method.call Connman_interfaces.Net_connman_Service.m_Remove
+        service._proxy ()
 end
 
 module Manager = struct

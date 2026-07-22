@@ -85,6 +85,7 @@ let proxy_form proxy =
 let maybe_elem cond elem = if cond then Some elem else None
 
 let not_connected_form service =
+  let requires_identity = List.mem IEEE8021x service.security in
   let requires_passphrase = service.security <> [ None ] in
   form
     ~a:
@@ -93,6 +94,22 @@ let not_connected_form service =
       ; Unsafe.string_attrib "is" "disable-after-submit"
       ]
     (Option.to_list
+       (maybe_elem requires_identity
+          (label
+             ~a:[ a_class [ "d-Label" ] ]
+             [ txt "Identity"
+             ; input
+                 ~a:
+                   [ a_input_type `Text
+                   ; a_class [ "d-Input"; "d-Network__Input" ]
+                   ; a_name "identity"
+                   ; a_required ()
+                   ]
+                 ()
+             ]
+          )
+       )
+    @ Option.to_list
        (maybe_elem requires_passphrase
           (label
              ~a:[ a_class [ "d-Label" ] ]
