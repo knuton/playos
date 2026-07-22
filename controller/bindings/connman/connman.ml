@@ -715,7 +715,7 @@ module Service = struct
           (Printf.sprintf
              "Connection failed due to invalid arguments provided, the \
               authentication protocol used by the access point is most likely \
-              unsupported"
+              unsupported."
           )
     | Error exn, None ->
         Lwt.fail_with
