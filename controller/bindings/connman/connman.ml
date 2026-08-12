@@ -655,10 +655,11 @@ module Service = struct
     in
     set_property service ~name:"Nameservers.Configuration" ~value:config
 
+  let service_config_path service_id =
+    Printf.sprintf "/var/lib/connman/3_wifi_%s.config" service_id
+
   let create_connman_config service kv_pairs =
-    let config_path =
-      Printf.sprintf "/var/lib/connman/3_wifi_%s.config" service.id
-    in
+    let config_path = service_config_path service.id in
     let header = Printf.sprintf "[service_%s]\n" service.id in
     let body =
       kv_pairs
@@ -787,10 +788,9 @@ module Service = struct
     let%lwt () =
       Logs_lwt.debug ~src:log_src (fun m -> m "remove service %s" service.id)
     in
-    let config_path = Printf.sprintf "/var/lib/connman/3_wifi_%s.config" service.id in
+    let config_path = service_config_path service.id in
     let%lwt config_file_exists = Lwt_unix.file_exists config_path in
-    if config_file_exists then
-      Lwt_unix.unlink config_path
+    if config_file_exists then Lwt_unix.unlink config_path
     else
       OBus_method.call Connman_interfaces.Net_connman_Service.m_Remove
         service._proxy ()
