@@ -655,6 +655,21 @@ module Service = struct
     in
     set_property service ~name:"Nameservers.Configuration" ~value:config
 
+  let create_connman_config service kv_pairs =
+    let config_path =
+      Printf.sprintf "/var/lib/connman/3_wifi_%s.config" service.id
+    in
+    let header = Printf.sprintf "[service_%s]\n" service.id in
+    let body =
+      kv_pairs
+      |> List.map (fun (k, v) -> Printf.sprintf "%s = %s" k v)
+      |> String.concat "\n"
+    in
+    let config_content = header ^ body ^ "\n" in
+    Lwt_io.with_file ~mode:Lwt_io.Output config_path (fun channel ->
+        Lwt_io.write channel config_content
+    )
+
   let hex_encode_ssid s =
     let buf = Buffer.create (String.length s * 2) in
     String.iter
@@ -675,18 +690,13 @@ module Service = struct
     let%lwt () =
       match input with
       | Agent.EAP (e, _, _) ->
-          let config_path =
-            Printf.sprintf "/var/lib/connman/3_wifi_%s.config" service.id
-          in
-          let config_content =
-            Printf.sprintf
-              "[service_%s]\nType = wifi\nSSID = %s\nEAP = %s\nPhase2 = MSCHAPV2\n"
-              service.id (hex_encode_ssid service.name) e
-          in
           let%lwt () =
-            Lwt_io.with_file ~mode:Lwt_io.Output config_path (fun channel ->
-              Lwt_io.write channel config_content
-            )
+            create_connman_config service
+              [ ("Type", "wifi")
+              ; ("SSID", hex_encode_ssid service.name)
+              ; ("EAP", e)
+              ; ("Phase2", "MSCHAPV2")
+              ]
           in
           (* Yield briefly to allow ConnMan's inotify loop to process the new file *)
           Lwt_unix.sleep 0.1
