@@ -95,23 +95,7 @@ class MockConnmanManager(dbus.service.Object):
             }, signature='sv')
 
         mock_services = [
-            # 1. Ethernet (Online)
-            (
-                dbus.ObjectPath('/net/connman/service/ethernet_mock'),
-                dbus.Dictionary({
-                    'Type': dbus.String('ethernet'),
-                    'Name': dbus.String('Wired'),
-                    'State': dbus.String('ready'),
-                    'Favorite': dbus.Boolean(True),
-                    'AutoConnect': dbus.Boolean(True),
-                    'IPv4': dbus.Dictionary({'Address': '192.168.1.10',
-                                             'Netmask': '255.255.255.0', 'Method': 'dhcp'}, signature='sv'),
-                    'Security': dbus.Array(['none'], signature='s'),
-                    'Nameservers.Configuration': dbus.Array(['8.8.8.8', '1.1.1.1'], signature='s'),
-                    'Ethernet': mock_ethernet_dict(ETH_INTERFACE_1, 'AA:BB:CC:DD:EE:01')
-                }, signature='sv')
-            ),
-            # 2. WiFi AP (Ready / Connected)
+            # 1. WiFi AP (default service)
             (
                 dbus.ObjectPath('/net/connman/service/wifi_mock_home'),
                 dbus.Dictionary({
@@ -133,6 +117,22 @@ class MockConnmanManager(dbus.service.Object):
                     }, signature='sv'),
                     'Nameservers.Configuration': dbus.Array(['8.8.8.8'], signature='s'),
                     'Ethernet': mock_ethernet_dict(WIFI_INTERFACE, 'AA:BB:CC:DD:EE:02')
+                }, signature='sv')
+            ),
+            # 2. Ethernet
+            (
+                dbus.ObjectPath('/net/connman/service/ethernet_mock'),
+                dbus.Dictionary({
+                    'Type': dbus.String('ethernet'),
+                    'Name': dbus.String('Wired'),
+                    'State': dbus.String('ready'),
+                    'Favorite': dbus.Boolean(True),
+                    'AutoConnect': dbus.Boolean(True),
+                    'IPv4': dbus.Dictionary({'Address': '192.168.1.10',
+                                             'Netmask': '255.255.255.0', 'Method': 'dhcp'}, signature='sv'),
+                    'Security': dbus.Array(['none'], signature='s'),
+                    'Nameservers.Configuration': dbus.Array(['8.8.8.8', '1.1.1.1'], signature='s'),
+                    'Ethernet': mock_ethernet_dict(ETH_INTERFACE_1, 'AA:BB:CC:DD:EE:01')
                 }, signature='sv')
             ),
             (
